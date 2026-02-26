@@ -1,0 +1,25 @@
+- name: Проверка директорий и их создание, при отсутствии
+  file:
+    path: /opt/traefik/data/traefik
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+    
+- name: Генерация docker-compose traefik
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/traefik/docker-compose.yml
+
+- name: Создание acme.json для traefik
+  ansible.builtin.command:
+    cmd: install -m 600 /dev/null /opt/traefik/data/traefik/acme.json
+  args:
+    creates: /opt/traefik/data/traefik/acme.json
+
+- name: Деплой traefik
+  community.docker.docker_compose_v2:
+    project_src: /opt/traefik
+    files:
+      - docker-compose.yml
+    state: present

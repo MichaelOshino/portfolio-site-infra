@@ -1,0 +1,36 @@
+services:
+  traefik:
+    image: traefik:v3
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.allowEmptyServices=true
+      - --providers.docker.network=reverse-proxy
+
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - /opt/traefik/data/traefik/acme.json:/letsencrypt/acme.json 
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      reverse-proxy:
+        ipv4_address: 172.21.0.254
+networks:
+  reverse-proxy:
+    driver: bridge
+    name: reverse-proxy
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.0.0/24

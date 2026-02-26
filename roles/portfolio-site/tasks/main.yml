@@ -1,0 +1,19 @@
+- name: Проверка директорий portfolio_site
+  file:
+    path: /opt/portfolio_site/
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+    
+- name: Генерация docker-compose portfolio_site
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/portfolio_site/docker-compose.yml
+
+- name: Запуск portfolio_site
+  community.docker.docker_compose_v2:
+    project_src: /opt/portfolio_site
+    files:
+      - docker-compose.yml
+    state: present
