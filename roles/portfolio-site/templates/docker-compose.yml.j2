@@ -20,6 +20,40 @@ services:
     networks:
       - reverse-proxy
 
+  webhook:
+    build:
+      context: ./data/webhook
+      dockerfile: Dockerfile
+      args:
+        UID: {{ portfolio_site_webhook_user_uid }}
+        USER: {{ portfolio_site_webhook_user }}
+    user: {{ portfolio_site_webhook_user }}:{{ portfolio_site_webhook_user }}
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.middlewares.hsts-header.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.hsts-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.hsts-header.headers.stsPreload=true"
+
+      - "traefik.http.routers.portfolio_site_webhook-router.rule=Host(`{{ portfolio_site_domain }}`) && PathPrefix(`/{{ portfolio_site_webhook_path }}/`)"
+      - "traefik.http.routers.portfolio_site_webhook-router.entrypoints=websecure"
+      - "traefik.http.routers.portfolio_site_webhook-router.tls=true"
+      - "traefik.http.routers.portfolio_site_webhook-router.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portfolio_site_webhook-router.middlewares=hsts-header"
+      - "traefik.http.routers.portfolio_site_webhook-router.service=portfolio_site_webhook-service"
+      - "traefik.http.services.portfolio_site_webhook-service.loadbalancer.server.port=9000"
+      - "traefik.http.services.portfolio_site_webhook-service.loadbalancer.server.scheme=http"
+
+    volumes:
+      - ./data/webhook/hooks.json:/etc/webhook/hooks.json:ro
+      - ./data/webhook/.ssh/id_ed25519:/etc/webhook/ssh_key:ro
+    command: ["-verbose", "-hooks=/etc/webhook/hooks.json", "-hotreload", "-urlprefix={{ portfolio_site_webhook_path }}"]
+    networks:
+      - reverse-proxy
+
 networks:
   reverse-proxy:
     external: true

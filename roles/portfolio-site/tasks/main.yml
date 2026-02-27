@@ -5,11 +5,85 @@
     owner: root
     group: root
     mode: '0755'
-    
+
+- name: Создание пользователя "{{ portfolio_site_webhook_user }}" для вебхука
+  user:
+    name: "{{ portfolio_site_webhook_user }}"
+    shell: /bin/bash
+    home: /opt/portfolio_site/data/webhook
+    create_home: yes
+    system: yes
+    state: present
+
+- name: Создание /opt/portfolio_site/data/webhook/.ssh
+  file:
+    path: /opt/portfolio_site/data/webhook/.ssh
+    state: directory
+    owner: "{{ portfolio_site_webhook_user }}"
+    group: "{{ portfolio_site_webhook_user }}"
+    mode: '0700'
+
+- name: Генарация ключа /opt/portfolio_site/data/webhook/.ssh/id_ed25519
+  community.crypto.openssh_keypair:
+    path: /opt/portfolio_site/data/webhook/.ssh/id_ed25519
+    type: ed25519
+    owner: "{{ portfolio_site_webhook_user }}"
+    group: "{{ portfolio_site_webhook_user }}"
+    state: present
+  register: ssh_key_generated
+
+- name: Добавление публичного ключа в authorized_keys с ограничением
+  ansible.posix.authorized_key:
+    user: "{{ portfolio_site_webhook_user }}"
+    state: present
+    key: "{{ lookup('file', '/opt/portfolio_site/data/webhook/.ssh/id_ed25519.pub') }}"
+    path: /opt/portfolio_site/data/webhook/.ssh/authorized_keys
+    manage_dir: yes
+    key_options: 'command="sudo /opt/portfolio_site/data/webhook/autoupdate.sh",no-agent-forwarding,no-pty,no-X11-forwarding'
+
+- name: Настраивается sudoers для "{{ portfolio_site_webhook_user }}"
+  copy:
+    content: "{{ portfolio_site_webhook_user }} ALL=(ALL) NOPASSWD: /opt/portfolio_site/data/webhook/autoupdate.sh\n"
+    dest: /etc/sudoers.d/{{ portfolio_site_webhook_user }}
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Создание скрипта autoupdate.sh
+  copy:
+    content: |
+      #!/bin/bash
+      set -e
+      echo "$(date) - запуск автообновления" >> /opt/portfolio_site/data/webhook/update.log
+      cd /opt/portfolio_site
+      /usr/bin/docker compose pull portfolio-site
+      /usr/bin/docker compose up -d portfolio-site
+    dest: /opt/portfolio_site/data/webhook/autoupdate.sh
+    owner: root
+    group: root
+    mode: '0744'
+- name: Получение UID "{{ portfolio_site_webhook_user }}"
+  command: id -u "{{ portfolio_site_webhook_user }}"
+  register: webhookuser_uid_result
+  changed_when: false
+- name: Сейвим UID "{{ portfolio_site_webhook_user }}"
+  set_fact:
+    portfolio_site_webhook_user_uid: "{{ webhookuser_uid_result.stdout }}"
+
+- name: Генерация конфига webhook 
+  template:
+    src: hooks.json.j2
+    dest: /opt/portfolio_site/data/webhook/hooks.json
+
 - name: Генерация docker-compose portfolio_site
   template:
     src: docker-compose.yml.j2
     dest: /opt/portfolio_site/docker-compose.yml
+
+- name: Копирование Dockerfile для webhook
+  copy:
+    src: files/webhook/
+    dest: /opt/portfolio_site/data/webhook/
+    mode: '0644'
 
 - name: Запуск portfolio_site
   community.docker.docker_compose_v2:

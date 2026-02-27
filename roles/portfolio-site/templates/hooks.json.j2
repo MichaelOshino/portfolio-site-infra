@@ -1,0 +1,25 @@
+[
+  {
+    "id": "{{ portfolio_site_webhook_id_push }}",
+    "execute-command": "/usr/bin/ssh",
+    "pass-arguments-to-command": [
+      { "source": "string", "name": "-i" },
+      { "source": "string", "name": "/etc/webhook/ssh_key" },
+      { "source": "string", "name": "-o" }, { "source": "string", "name": "BatchMode=yes" },
+      { "source": "string", "name": "-o" }, { "source": "string", "name": "StrictHostKeyChecking=no" },
+      { "source": "string", "name": "-o" }, { "source": "string", "name": "ConnectTimeout=10" },
+      { "source": "string", "name": "{{ portfolio_site_webhook_user }}@host.docker.internal" }
+    ],
+    "response-message": "Начало деплоя",
+    "trigger-rule": {
+          "match": {
+            "type": "payload-hmac-sha256",
+            "secret": "{{ portfolio_site_webhook_secret }}",
+            "parameter": {
+              "source": "header",
+              "name": "X-Hub-Signature-256"
+        }
+      }
+    }
+  }
+]

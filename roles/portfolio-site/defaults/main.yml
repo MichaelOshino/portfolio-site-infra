@@ -1,2 +1,6 @@
-portfolio_site_image: ghcr.io/michaeloshino/portfolio-site:latest
-portfolio_site_domain: example.com
+portfolio_site_image: 
+portfolio_site_domain: 
+portfolio_site_webhook_user: 
+portfolio_site_webhook_path: 
+portfolio_site_webhook_id_push: 
+portfolio_site_webhook_secret: 
