@@ -1,0 +1,36 @@
+http:
+  routers:
+    portfolio_site-rtr:
+      rule: "Host(`{{ portfolio_site_domain }}`)"
+      entryPoints: 
+        - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+      middlewares:
+        - "hsts-headers@file"
+        - "secure-headers@file"
+        - "ratelimit-control@file"
+      service: "portfolio_site-svc"
+
+    portfolio_site_webhook-rtr:
+      rule: "Host(`{{ portfolio_site_domain }}`) && PathPrefix(`/{{ portfolio_site_webhook_path }}/`)"
+      entryPoints: 
+        - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+      middlewares:
+        - "hsts-headers@file"
+        - "secure-headers@file"
+        - "ratelimit-control@file"
+      service: "portfolio_site_webhook-svc"
+
+  services:
+    portfolio_site-svc:
+      loadBalancer:
+        servers:
+          - url: "http://portfolio-site:80"
+
+    portfolio_site_webhook-svc:
+      loadBalancer:
+        servers:
+          - url: "http://portfolio-site-webhook:9000"

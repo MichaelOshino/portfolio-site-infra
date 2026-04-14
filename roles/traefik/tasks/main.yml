@@ -1,10 +1,26 @@
 - name: Проверка директорий и их создание, при отсутствии
   file:
-    path: /opt/traefik/data/traefik
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
+      path: "{{ item }}"
+      state: directory
+      mode: '0755'
+      owner: root
+      group: root
+  loop:
+    - /opt/traefik/data
+    - /opt/traefik/data/dynamic
+
+- name: Деплой сатического конфига
+  template:
+    src: traefik.yml.j2
+    dest: /opt/traefik/data/traefik.yml
+    mode: '0644'
+  notify: Перезапуск traefik
+
+- name: Деплой динамического конфига
+  template:
+    src: global.yml.j2
+    dest: /opt/traefik/data/dynamic/global.yml
+    mode: '0644'
     
 - name: Генерация docker-compose traefik
   template:
@@ -13,9 +29,9 @@
 
 - name: Создание acme.json для traefik
   ansible.builtin.command:
-    cmd: install -m 600 /dev/null /opt/traefik/data/traefik/acme.json
+    cmd: install -m 600 /dev/null /opt/traefik/data/acme.json
   args:
-    creates: /opt/traefik/data/traefik/acme.json
+    creates: /opt/traefik/data/acme.json
 
 - name: Деплой traefik
   community.docker.docker_compose_v2:

@@ -85,6 +85,12 @@
     dest: /opt/portfolio_site/data/webhook/
     mode: '0644'
 
+- name: Деплой динамического конфига traefik
+  template:
+    src: portfolio-site-traefik.yml.j2
+    dest: /opt/traefik/data/dynamic/portfolio-site-traefik.yml
+    mode: '0644'
+
 - name: Запуск portfolio_site
   community.docker.docker_compose_v2:
     project_src: /opt/portfolio_site
